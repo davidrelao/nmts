@@ -123,6 +123,14 @@ export default function Confirmation() {
                 </div>
               </div>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '16px' }}>👥</span>
+                <div>
+                  <p style={{ fontWeight: '600', margin: '0 0 4px 0' }}>Number of Visitors</p>
+                  <p style={{ color: '#64748b', margin: 0 }}>{reservation.number_of_visitors} {reservation.number_of_visitors === 1 ? 'person' : 'people'}</p>
+                </div>
+              </div>
+
               {reservation.museums && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ fontSize: '16px' }}>📍</span>

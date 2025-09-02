@@ -106,6 +106,11 @@ export default function ReserveTicket() {
       // Generate unique reservation code
       const reservationCode = Math.random().toString(36).substring(2, 10).toUpperCase()
       
+      // Get current time in GMT+8 (Asia/Manila timezone)
+      const now = new Date()
+      const gmt8Time = new Date(now.getTime() + (8 * 60 * 60 * 1000))
+      const created_at = gmt8Time.toISOString()
+      
       // Generate QR code data with all reservation details
       const qrData = JSON.stringify({
         code: reservationCode,
@@ -135,6 +140,7 @@ export default function ReserveTicket() {
             museum_section: selectedSection,
             museum_id: museum.id,
             number_of_visitors: formData.number_of_visitors,
+            created_at: created_at,
           },
         ])
         .select(`
