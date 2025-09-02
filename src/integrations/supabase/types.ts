@@ -53,6 +53,7 @@ export type Database = {
           id: string
           museum_id: string | null
           museum_section: string
+          number_of_visitors: number
           qr_code_data: string
           reservation_code: string
           visit_date: string
@@ -65,6 +66,7 @@ export type Database = {
           id?: string
           museum_id?: string | null
           museum_section?: string
+          number_of_visitors?: number
           qr_code_data: string
           reservation_code: string
           visit_date: string
@@ -77,6 +79,7 @@ export type Database = {
           id?: string
           museum_id?: string | null
           museum_section?: string
+          number_of_visitors?: number
           qr_code_data?: string
           reservation_code?: string
           visit_date?: string

@@ -17,7 +17,8 @@ export default function ReserveTicket() {
     visitor_name: '',
     visitor_email: '',
     visit_date: '',
-    visit_time: '09:00'
+    visit_time: '09:00',
+    number_of_visitors: 1
   })
 
   const sections = {
@@ -89,7 +90,7 @@ export default function ReserveTicket() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (!formData.visitor_name || !formData.visitor_email || !formData.visit_date || !formData.visit_time || !selectedSection) {
+    if (!formData.visitor_name || !formData.visitor_email || !formData.visit_date || !formData.visit_time || !selectedSection || !formData.number_of_visitors) {
       toast({
         title: 'Missing Information',
         description: 'Please fill in all fields and select a museum section',
@@ -115,6 +116,7 @@ export default function ReserveTicket() {
         section: sections[selectedSection]?.name,
         museum: museum.name,
         museumId: museum.id,
+        numberOfVisitors: formData.number_of_visitors,
       })
       
       const qrCodeDataUrl = await QRCode.toDataURL(qrData)
@@ -377,6 +379,36 @@ export default function ReserveTicket() {
                 }}
                 required
               />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontWeight: '600', marginBottom: '8px' }}>
+                Number of Visitors
+              </label>
+              <select
+                name="number_of_visitors"
+                value={formData.number_of_visitors}
+                onChange={handleInputChange}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '16px',
+                  boxSizing: 'border-box',
+                  backgroundColor: 'white'
+                }}
+                required
+              >
+                <option value={1}>1 person</option>
+                <option value={2}>2 people</option>
+                <option value={3}>3 people</option>
+                <option value={4}>4 people</option>
+                <option value={5}>5 people (max)</option>
+              </select>
+              <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                Maximum of 5 visitors per reservation
+              </p>
             </div>
             
             <div>
