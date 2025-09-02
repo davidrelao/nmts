@@ -1,0 +1,51 @@
+-- Complete database setup for museum reservation system
+-- Run this entire block in Supabase SQL Editor
+
+-- Create museums table
+CREATE TABLE museums (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  location TEXT NOT NULL,
+  opening_hours TEXT NOT NULL,
+  admission_price TEXT,
+  image_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create reservations table
+CREATE TABLE reservations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  visitor_name TEXT NOT NULL,
+  visitor_email TEXT NOT NULL,
+  reservation_code TEXT NOT NULL UNIQUE,
+  qr_code_data TEXT NOT NULL,
+  visit_date DATE NOT NULL,
+  visit_time TEXT NOT NULL,
+  museum_section TEXT NOT NULL,
+  museum_id UUID REFERENCES museums(id),
+  number_of_visitors INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for better performance
+CREATE INDEX idx_reservations_museum_id ON reservations(museum_id);
+CREATE INDEX idx_reservations_visit_date ON reservations(visit_date);
+CREATE INDEX idx_reservations_reservation_code ON reservations(reservation_code);
+
+-- Insert sample museum data
+INSERT INTO museums (name, description, location, opening_hours, admission_price, image_url) VALUES
+('National Museum of the Philippines', 'The premier museum showcasing Filipino art, culture, and history', 'Manila, Philippines', '9:00 AM - 6:00 PM', 'Free Admission', 'https://www.goodnewspilipinas.com/wp-content/uploads/2025/01/NMP-Manila.webp');
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE museums ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for public access
+CREATE POLICY "Allow public read access to museums" ON museums FOR SELECT USING (true);
+CREATE POLICY "Allow public insert access to reservations" ON reservations FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public read access to reservations" ON reservations FOR SELECT USING (true);
+
+-- Verify setup by selecting from tables
+SELECT 'Museums table created with ' || COUNT(*) || ' records' as status FROM museums;
+SELECT 'Reservations table created with ' || COUNT(*) || ' records' as status FROM reservations;
