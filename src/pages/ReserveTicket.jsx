@@ -134,6 +134,7 @@ export default function ReserveTicket() {
             visit_time: formData.visit_time,
             museum_section: selectedSection,
             museum_id: museum.id,
+            number_of_visitors: formData.number_of_visitors,
           },
         ])
         .select(`
