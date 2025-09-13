@@ -16,6 +16,7 @@
     "setup:env": "node scripts/setup-env.js",
     "setup:quick": "node scripts/quick-setup.js",
     "setup:production": "node scripts/setup-production.js",
+    "setup:team": "node scripts/team-setup.js",
     "postbuild": "prisma generate"
   },
   "dependencies": {
