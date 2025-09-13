@@ -1,0 +1,10 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#2D5A27"/>
+  <rect x="50" y="50" width="700" height="500" fill="#4A7C59" stroke="#FFFFFF" stroke-width="4"/>
+  <text x="400" y="280" font-family="Arial, sans-serif" font-size="48" font-weight="bold" text-anchor="middle" fill="#FFFFFF">National Museum</text>
+  <text x="400" y="340" font-family="Arial, sans-serif" font-size="32" text-anchor="middle" fill="#FFFFFF">of the Philippines</text>
+  <circle cx="200" cy="150" r="30" fill="#D4AF37"/>
+  <circle cx="600" cy="150" r="30" fill="#D4AF37"/>
+  <circle cx="200" cy="450" r="30" fill="#D4AF37"/>
+  <circle cx="600" cy="450" r="30" fill="#D4AF37"/>
+</svg>

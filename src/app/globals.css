@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Museum Color Palette - Inspired by Heritage and Classical Architecture */
+  --primary: 20 14% 24%;          /* Deep museum brown */
+  --primary-glow: 25 20% 35%;     /* Warm bronze */
+  --secondary: 210 20% 88%;       /* Museum white/marble */
+  --accent: 35 40% 50%;           /* Heritage gold */
+  --muted: 25 10% 94%;            /* Soft cream */
+  --muted-foreground: 25 8% 45%;  /* Warm gray text */
+  
+  /* Background colors */
+  --background: 30 15% 97%;       /* Warm museum white */
+  --foreground: 20 14% 15%;       /* Dark reading text */
+  --card: 0 0% 100%;              /* Pure white for cards */
+  --card-foreground: 20 14% 15%;  /* Card text */
+  
+  /* Interactive states */
+  --border: 25 15% 85%;           /* Subtle warm border */
+  --input: 25 15% 85%;            /* Input borders */
+  --ring: 20 14% 24%;             /* Focus rings */
+  
+  /* Museum-specific gradients */
+  --gradient-primary: linear-gradient(135deg, hsl(20, 14%, 24%), hsl(25, 20%, 35%));
+  --gradient-heritage: linear-gradient(135deg, hsl(35, 40%, 50%), hsl(25, 20%, 35%));
+  --gradient-subtle: linear-gradient(180deg, hsl(30, 15%, 97%), hsl(25, 10%, 94%));
+  
+  /* Elegant shadows with warm tones */
+  --shadow-museum: 0 10px 30px -10px hsla(20, 14%, 24%, 0.2);
+  --shadow-heritage: 0 0 40px hsla(35, 40%, 50%, 0.15);
+  
+  /* Smooth transitions */
+  --transition-elegant: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark Museum Theme - Maintains original warm tones */
+    --background: 20 14% 8%;        /* Very dark museum brown */
+    --foreground: 30 15% 95%;       /* Light warm text */
+    --card: 20 14% 12%;             /* Dark museum brown cards */
+    --card-foreground: 30 15% 95%;  /* Light warm text on cards */
+    --muted: 20 14% 15%;            /* Dark muted background */
+    --muted-foreground: 30 15% 70%; /* Medium light warm text */
+    --border: 20 14% 20%;           /* Dark warm border */
+    --input: 20 14% 15%;            /* Dark input background */
+  }
+}
+
+body {
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Museum-specific utilities */
+  .bg-heritage-gradient {
+    background: var(--gradient-heritage);
+  }
+  
+  .bg-primary-gradient {
+    background: var(--gradient-primary);
+  }
+  
+  .shadow-museum {
+    box-shadow: var(--shadow-museum);
+  }
+  
+  .shadow-heritage {
+    box-shadow: var(--shadow-heritage);
+  }
+  
+  .transition-elegant {
+    transition: all 0.3s var(--transition-elegant);
+  }
+  
+  /* Ensure proper text contrast */
+  .text-foreground {
+    color: hsl(var(--foreground));
+  }
+  
+  .text-muted-foreground {
+    color: hsl(var(--muted-foreground));
+  }
+  
+  .bg-background {
+    background-color: hsl(var(--background));
+  }
+  
+  .bg-card {
+    background-color: hsl(var(--card));
+  }
+  
+  .text-card-foreground {
+    color: hsl(var(--card-foreground));
+  }
+}
+
+/* Custom animations */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
