@@ -38,6 +38,17 @@ Visit: **http://localhost:3000**
 ## 🗄️ Database Options
 
 ### Option 1: Local MySQL
+
+**Windows Users:**
+```cmd
+# Run the Windows setup script:
+scripts\setup-mysql-windows.bat
+
+# Then use:
+DATABASE_URL="mysql://root:password@localhost:3306/museum_reservation"
+```
+
+**Mac/Linux Users:**
 ```bash
 # Install MySQL, then use:
 DATABASE_URL="mysql://root:password@localhost:3306/museum_reservation"
@@ -46,6 +57,10 @@ DATABASE_URL="mysql://root:password@localhost:3306/museum_reservation"
 ### Option 2: Cloud Database (Free)
 - [PlanetScale](https://planetscale.com) - Free tier
 - [Railway](https://railway.app) - Free tier
+
+### Option 3: XAMPP (Windows - Easiest)
+- Download [XAMPP](https://www.apachefriends.org/download.html)
+- Install and start MySQL from XAMPP Control Panel
 
 ## 🔧 Common Commands
 

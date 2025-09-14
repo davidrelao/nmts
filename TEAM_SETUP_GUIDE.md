@@ -11,6 +11,21 @@ Before you start, make sure you have:
 - **Git** installed
 - **MySQL** installed locally OR access to a remote database
 
+### 🪟 Windows Users - MySQL Setup
+
+If you're on Windows and need to install MySQL:
+
+1. **Quick Setup**: Run the Windows setup script:
+   ```cmd
+   scripts\setup-mysql-windows.bat
+   ```
+
+2. **Manual Setup**: See `WINDOWS_MYSQL_SETUP.md` for detailed instructions
+
+3. **Alternative**: Use XAMPP (easier for beginners)
+   - Download from [XAMPP](https://www.apachefriends.org/download.html)
+   - Install and start MySQL from XAMPP Control Panel
+
 ## 🚀 Step-by-Step Setup
 
 ### Step 1: Clone/Pull the Repository
