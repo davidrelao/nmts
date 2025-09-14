@@ -18,7 +18,13 @@ export default async function AdminPage() {
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
   const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1)
 
-  const [todaysReservations, weeklyReservations, monthlyReservations, allReservations] = await Promise.all([
+  let todaysReservations = []
+  let weeklyReservations = []
+  let monthlyReservations = []
+  let allReservations = []
+
+  try {
+    [todaysReservations, weeklyReservations, monthlyReservations, allReservations] = await Promise.all([
     // Today's reservations
     prisma.reservation.findMany({
       where: {
@@ -74,6 +80,10 @@ export default async function AdminPage() {
       orderBy: { createdAt: 'desc' }
     })
   ])
+  } catch (error) {
+    console.error('Error fetching reservation data:', error)
+    // Continue with empty arrays - the dashboard will show empty state
+  }
 
   // Calculate comprehensive stats
   const stats = {
