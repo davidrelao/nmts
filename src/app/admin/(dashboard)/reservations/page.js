@@ -59,28 +59,37 @@ export default async function ReservationsPage({ searchParams }) {
     }
   }
 
-  // Fetch reservations with filters
-  const reservations = await prisma.reservation.findMany({
-    where: whereConditions,
-    include: {
-      museum: {
-        select: {
-          id: true,
-          name: true,
-          location: true,
-          openingHours: true,
-          admissionPrice: true,
-        }
-      }
-    },
-    orderBy: { visitTime: 'asc' }
-  })
+  // Initialize default values
+  let reservations = []
+  let sections = []
 
-  // Get unique sections for filter dropdown
-  const sections = await prisma.reservation.findMany({
-    select: { museumSection: true },
-    distinct: ['museumSection']
-  })
+  try {
+    // Fetch reservations with filters
+    reservations = await prisma.reservation.findMany({
+      where: whereConditions,
+      include: {
+        museum: {
+          select: {
+            id: true,
+            name: true,
+            location: true,
+            openingHours: true,
+            admissionPrice: true,
+          }
+        }
+      },
+      orderBy: { visitTime: 'asc' }
+    })
+
+    // Get unique sections for filter dropdown
+    sections = await prisma.reservation.findMany({
+      select: { museumSection: true },
+      distinct: ['museumSection']
+    })
+  } catch (error) {
+    console.error('Error fetching reservations data:', error)
+    // Continue with empty arrays - the page will show empty state
+  }
 
   return (
     <ReservationsManagement 

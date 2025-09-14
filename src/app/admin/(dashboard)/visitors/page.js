@@ -17,23 +17,28 @@ export default async function VisitorsPage({ searchParams }) {
     ]
   }
 
-  // Get unique visitors with their reservation counts
-  const visitors = await prisma.reservation.groupBy({
-    by: ['visitorName', 'visitorEmail'],
-    where: whereConditions,
-    _count: {
-      id: true
-    },
-    _max: {
-      visitDate: true
-    },
-    _sum: {
-      numberOfVisitors: true
-    }
-  })
+  // Initialize default values
+  let visitors = []
+  let visitorData = []
 
-  // Transform data for display
-  let visitorData = visitors.map(visitor => ({
+  try {
+    // Get unique visitors with their reservation counts
+    visitors = await prisma.reservation.groupBy({
+      by: ['visitorName', 'visitorEmail'],
+      where: whereConditions,
+      _count: {
+        id: true
+      },
+      _max: {
+        visitDate: true
+      },
+      _sum: {
+        numberOfVisitors: true
+      }
+    })
+
+    // Transform data for display
+    visitorData = visitors.map(visitor => ({
     name: visitor.visitorName,
     email: visitor.visitorEmail,
     totalReservations: visitor._count.id,
@@ -65,6 +70,10 @@ export default async function VisitorsPage({ searchParams }) {
       const result = a.totalReservations - b.totalReservations
       return sortOrder === 'asc' ? result : -result
     })
+  }
+  } catch (error) {
+    console.error('Error fetching visitors data:', error)
+    // Continue with empty array - the page will show empty state
   }
 
   return (

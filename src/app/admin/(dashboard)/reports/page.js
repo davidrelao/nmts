@@ -2,15 +2,24 @@ import { prisma } from '@/lib/db'
 import ReportsPage from '../components/ReportsPage'
 
 export default async function Reports() {
-  // Get comprehensive analytics data
-  const [
-    totalReservations,
-    totalVisitors,
-    checkedInReservations,
-    sectionStats,
-    monthlyStats,
-    recentReservations
-  ] = await Promise.all([
+  // Initialize default values
+  let totalReservations = 0
+  let totalVisitors = { _sum: { numberOfVisitors: 0 } }
+  let checkedInReservations = 0
+  let sectionStats = []
+  let monthlyStats = []
+  let recentReservations = []
+
+  try {
+    // Get comprehensive analytics data
+    [
+      totalReservations,
+      totalVisitors,
+      checkedInReservations,
+      sectionStats,
+      monthlyStats,
+      recentReservations
+    ] = await Promise.all([
     // Total reservations
     prisma.reservation.count(),
     
@@ -54,6 +63,10 @@ export default async function Reports() {
       }
     })
   ])
+  } catch (error) {
+    console.error('Error fetching analytics data:', error)
+    // Continue with default values - the reports will show empty state
+  }
 
   const analytics = {
     totalReservations,
