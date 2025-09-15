@@ -26,18 +26,8 @@ export async function POST(request) {
     // Generate unique reservation code
     const reservationCode = Math.random().toString(36).substring(2, 10).toUpperCase()
     
-    // Generate QR code data with all reservation details
-    const qrData = JSON.stringify({
-      type: 'RESERVATION',
-      code: reservationCode,
-      name: visitor_name,
-      email: visitor_email,
-      date: visit_date,
-      time: visit_time,
-      section: museum_section,
-      museumId: museum_id,
-      numberOfVisitors: parseInt(number_of_visitors),
-    })
+    // Generate QR code with just the reservation code
+    const qrData = reservationCode
     
     const qrCodeDataUrl = await QRCode.toDataURL(qrData)
     

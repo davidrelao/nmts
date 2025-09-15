@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { QrCode, CheckCircle, XCircle, RefreshCw, Camera } from 'lucide-react'
-// Removed jsQR import - using working scanner instead
+import QrScanner from 'qr-scanner'
 
 export default function QRScannerPage() {
   const [isScanning, setIsScanning] = useState(false)
@@ -14,34 +14,26 @@ export default function QRScannerPage() {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
 
-  // Working QR code detection - uses the working scanner structure
+  // Working QR code detection using qr-scanner
   const detectQRCode = (videoElement) => {
     return new Promise((resolve) => {
-      // Use the working scanner approach but with actual QR detection
-      const canvas = document.createElement('canvas')
-      const context = canvas.getContext('2d')
-      
-      const scan = () => {
-        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-          canvas.width = videoElement.videoWidth
-          canvas.height = videoElement.videoHeight
-          context.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
-          
-          // For now, simulate QR detection with a prompt
-          // This is where you'd integrate a real QR library
-          const qrContent = prompt('Enter QR code content (this simulates real QR detection):')
-          if (qrContent) {
-            resolve(qrContent)
-            return
-          }
+      const qrScanner = new QrScanner(
+        videoElement,
+        (result) => {
+          console.log('QR Code detected:', result.data)
+          resolve(result.data)
+          qrScanner.stop()
+        },
+        {
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
         }
-        
-        if (isScanning) {
-          requestAnimationFrame(scan)
-        }
-      }
+      )
       
-      scan()
+      qrScanner.start().catch(err => {
+        console.error('QR Scanner error:', err)
+        resolve(null)
+      })
     })
   }
 
@@ -50,24 +42,15 @@ export default function QRScannerPage() {
       setError('')
       setIsScanning(true)
       
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      })
-      
-      streamRef.current = stream
-      videoRef.current.srcObject = stream
-      
-      // For now, just show the camera and let user use manual input
-      // The camera is active but we'll rely on manual input for QR content
+      // Start QR detection using qr-scanner
+      const qrData = await detectQRCode(videoRef.current)
+      if (qrData) {
+        await handleQRCode(qrData)
+      }
       
     } catch (err) {
-      console.error('Camera error:', err)
-      setError('Camera access denied or not available')
+      console.error('QR Scanner error:', err)
+      setError('QR Scanner failed to start')
       setIsScanning(false)
     }
   }
@@ -90,46 +73,8 @@ export default function QRScannerPage() {
     try {
       console.log('QR Code detected:', qrData) // Debug log
       
-      let reservationCode = ''
-      
-      // Try to parse as JSON first (new format)
-      try {
-        const qrDataObj = JSON.parse(qrData)
-        console.log('Parsed QR data:', qrDataObj) // Debug log
-        
-        if (qrDataObj.type === 'RESERVATION' && qrDataObj.code) {
-          reservationCode = qrDataObj.code
-        } else {
-          throw new Error('Invalid QR code format')
-        }
-      } catch (parseError) {
-        console.log('JSON parse failed, trying fallback:', parseError) // Debug log
-        
-        // Check if it's just an email address - if so, we need to find the reservation by email
-        if (qrData.includes('@') && qrData.includes('.')) {
-          console.log('QR code contains email, searching by email:', qrData)
-          // Search for reservation by email
-          const response = await fetch(`/api/reservations?email=${encodeURIComponent(qrData)}`)
-          if (response.ok) {
-            const reservations = await response.json()
-            if (reservations.length > 0) {
-              // Get the most recent reservation for this email
-              const latestReservation = reservations[0]
-              reservationCode = latestReservation.reservationCode
-              console.log('Found reservation by email:', latestReservation.reservationCode)
-            } else {
-              throw new Error('No reservation found for this email')
-            }
-          } else {
-            throw new Error('Failed to search by email')
-          }
-        } else {
-          // Fallback to old format
-          reservationCode = qrData.replace('RESERVATION:', '')
-        }
-      }
-      
-      console.log('Extracted reservation code:', reservationCode) // Debug log
+      // QR data should be the reservation code directly
+      const reservationCode = qrData.trim()
       
       if (!reservationCode) {
         setScanResult({
@@ -139,14 +84,16 @@ export default function QRScannerPage() {
         return
       }
       
-      // Redirect to the scan page with the reservation code
+      console.log('Navigating to reservation:', reservationCode) // Debug log
+      
+      // Navigate directly to the scan page
       window.location.href = `/admin/scan/${reservationCode}`
       
     } catch (err) {
       console.error('QR processing error:', err) // Debug log
       setScanResult({
         success: false,
-        message: `Network error. Please try again. Error: ${err.message}`
+        message: `Error processing QR code: ${err.message}`
       })
     } finally {
       setIsLoading(false)
@@ -219,48 +166,15 @@ export default function QRScannerPage() {
               </div>
             </div>
             
-            {/* QR Input Field for Testing */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <label className="block text-sm font-medium text-yellow-800 mb-2">
-                QR Code Content (for testing):
-              </label>
-              <input
-                type="text"
-                value={qrInput}
-                onChange={(e) => setQrInput(e.target.value)}
-                placeholder="Paste QR content here (JSON, email, or reservation code)"
-                className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm"
-              />
-              <p className="text-xs text-yellow-700 mt-1">
-                Examples: YI6QEFHX, handsup@gabriela.com, or full JSON
-              </p>
-            </div>
-            
-            <div className="text-center space-y-3">
-              <p className="text-gray-600">Enter QR content above and click "Process QR"</p>
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={async () => {
-                    if (qrInput.trim()) {
-                      await handleQRCode(qrInput.trim())
-                    } else {
-                      setError('Please enter QR content first')
-                    }
-                  }}
-                  disabled={isLoading}
-                  className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                  <QrCode className="h-4 w-4 mr-2" />
-                  Process QR
-                </button>
-                <button
-                  onClick={stopScanning}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Stop Scanning
-                </button>
-              </div>
+            <div className="text-center">
+              <p className="text-gray-600 mb-4">Position the QR code within the frame</p>
+              <button
+                onClick={stopScanning}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Stop Scanning
+              </button>
             </div>
           </div>
         )}

@@ -59,7 +59,7 @@ export default function QRScanner({ onScan }) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-        const qrCode = jsQR(imageData.data, imageData.width, imageData.height)
+        const qrCode = null // QR detection disabled
 
         if (qrCode) {
           onScan(qrCode.data)
@@ -76,12 +76,7 @@ export default function QRScanner({ onScan }) {
     scan()
   }
 
-  // Simple QR code detection (you might want to use a library like jsQR)
-  const jsQR = (data, width, height) => {
-    // This is a simplified version - in production, use a proper QR library
-    // For now, we'll simulate QR detection
-    return null
-  }
+  // QR code detection disabled - no external libraries
 
   return (
     <div className="space-y-4">

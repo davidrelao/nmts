@@ -35,31 +35,31 @@ export async function POST(request, { params }) {
       )
     }
 
-    // Check if visit date is today or allow check-in for testing
+    // Check if visit date matches today (same date, regardless of time)
     const today = new Date()
     const visitDate = new Date(reservation.visitDate)
     
-    // For development/testing, allow check-in regardless of date
-    // In production, you might want to enforce date matching
-    const isToday = today.toDateString() === visitDate.toDateString()
-    const isWithinReasonableTime = Math.abs(today - visitDate) < (7 * 24 * 60 * 60 * 1000) // Within 7 days
+    // Compare just the date part (year, month, day) - ignore time
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const visitDateOnly = new Date(visitDate.getFullYear(), visitDate.getMonth(), visitDate.getDate())
+    
+    const isSameDate = todayDateOnly.getTime() === visitDateOnly.getTime()
     
     console.log('Check-in attempt:', {
       reservationCode: code,
-      today: today.toDateString(),
-      visitDate: visitDate.toDateString(),
-      isToday,
-      isWithinReasonableTime,
+      today: todayDateOnly.toDateString(),
+      visitDate: visitDateOnly.toDateString(),
+      isSameDate,
       reservation: {
         visitDate: reservation.visitDate,
         checkedIn: reservation.checkedIn
       }
     })
 
-    // Allow check-in if it's today OR within reasonable time (7 days)
-    if (!isToday && !isWithinReasonableTime) {
+    // Allow check-in only if it's the same date
+    if (!isSameDate) {
       return NextResponse.json(
-        { error: 'Cannot check in - visit date is too far from today' },
+        { error: 'Cannot check in on a different date than reserved' },
         { status: 400 }
       )
     }
