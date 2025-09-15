@@ -13,18 +13,40 @@ export default function QRScannerPage() {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
 
-  // Simple QR code detection (simulated but working)
+  // Real QR code detection using jsQR
   const detectQRCode = (videoElement) => {
-    // In a real implementation, you would use a QR code library like jsQR
-    // For now, we'll simulate QR detection but make it work with real QR codes
     return new Promise((resolve) => {
-      // Simulate a delay for scanning
-      setTimeout(() => {
-        // For testing, let's use a real reservation code from the database
-        // In production, this would be replaced with actual QR detection
-        const mockQRData = 'pogi@gmail.com' // This matches what you said the QR contains
-        resolve(mockQRData)
-      }, 2000)
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')
+      
+      const scan = () => {
+        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+          canvas.width = videoElement.videoWidth
+          canvas.height = videoElement.videoHeight
+          context.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
+          
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+          
+          try {
+            const qrCode = jsQR(imageData.data, imageData.width, imageData.height)
+            
+            if (qrCode && qrCode.data) {
+              console.log('QR Code detected:', qrCode.data)
+              console.log('QR Code location:', qrCode.location)
+              resolve(qrCode.data)
+              return
+            }
+          } catch (error) {
+            console.error('jsQR error:', error)
+          }
+        }
+        
+        if (isScanning) {
+          requestAnimationFrame(scan)
+        }
+      }
+      
+      scan()
     })
   }
 
@@ -45,11 +67,28 @@ export default function QRScannerPage() {
       streamRef.current = stream
       videoRef.current.srcObject = stream
       
-      // Start QR detection
-      const qrData = await detectQRCode(videoRef.current)
-      if (qrData) {
-        await handleQRCode(qrData)
+      // Start continuous QR detection
+      const scanLoop = async () => {
+        if (isScanning) {
+          try {
+            const qrData = await detectQRCode(videoRef.current)
+            if (qrData) {
+              await handleQRCode(qrData)
+              return // Stop scanning after successful detection
+            }
+          } catch (error) {
+            console.error('Scan error:', error)
+          }
+          
+          // Continue scanning if still active
+          if (isScanning) {
+            setTimeout(scanLoop, 100) // Check every 100ms
+          }
+        }
       }
+      
+      // Start the scan loop
+      scanLoop()
       
     } catch (err) {
       console.error('Camera error:', err)
