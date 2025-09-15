@@ -27,42 +27,34 @@ export default async function AdminPage() {
     const reservationsCollection = await getReservationsCollection()
     const museumsCollection = await getMuseumsCollection()
 
-    // Today's reservations
-    todaysReservations = await reservationsCollection
-      .find({
-        visitDate: {
-          $gte: today,
-          $lt: tomorrow
-        }
-      })
-      .sort({ visitTime: 1 })
-      .toArray()
-
-    // This week's reservations
-    weeklyReservations = await reservationsCollection
-      .find({
-        visitDate: {
-          $gte: weekStart,
-          $lt: weekEnd
-        }
-      })
-      .toArray()
-
-    // This month's reservations
-    monthlyReservations = await reservationsCollection
-      .find({
-        visitDate: {
-          $gte: monthStart,
-          $lt: monthEnd
-        }
-      })
-      .toArray()
-
-    // All reservations for analytics
+    // Get all reservations first to debug
     allReservations = await reservationsCollection
       .find({})
       .sort({ createdAt: -1 })
       .toArray()
+
+    console.log('All reservations found:', allReservations.length)
+    console.log('Sample reservation:', allReservations[0])
+
+    // Today's reservations - filter by creation date for admin view
+    todaysReservations = allReservations.filter(r => {
+      const createdDate = new Date(r.createdAt)
+      return createdDate.toDateString() === today.toDateString()
+    })
+
+    // This week's reservations - filter by creation date
+    weeklyReservations = allReservations.filter(r => {
+      const createdDate = new Date(r.createdAt)
+      return createdDate >= weekStart && createdDate < weekEnd
+    })
+
+    // This month's reservations - filter by creation date
+    monthlyReservations = allReservations.filter(r => {
+      const createdDate = new Date(r.createdAt)
+      return createdDate >= monthStart && createdDate < monthEnd
+    })
+
+    // allReservations already fetched above
 
     // Populate museum data for today's reservations
     todaysReservations = await Promise.all(
