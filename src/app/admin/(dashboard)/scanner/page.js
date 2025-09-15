@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { QrCode, CheckCircle, XCircle, RefreshCw, Camera } from 'lucide-react'
-import QrReader from 'react-qr-scanner'
+import jsQR from 'jsqr'
 
 export default function QRScannerPage() {
   const [isScanning, setIsScanning] = useState(false)
@@ -10,26 +10,68 @@ export default function QRScannerPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [manualCode, setManualCode] = useState('')
-  const [qrInput, setQrInput] = useState('')
   const videoRef = useRef(null)
   const streamRef = useRef(null)
 
-  // Handle QR code detection from react-qr-scanner
-  const handleScan = (data) => {
-    if (data) {
-      console.log('QR Code detected:', data)
-      handleQRCode(data)
+  // Real QR code detection using jsQR
+  const detectQRCode = (videoElement) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')
+      
+      const scan = () => {
+        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+          canvas.width = videoElement.videoWidth
+          canvas.height = videoElement.videoHeight
+          context.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
+          
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+          const qrCode = jsQR(imageData.data, imageData.width, imageData.height)
+          
+          if (qrCode) {
+            console.log('QR Code detected:', qrCode.data)
+            resolve(qrCode.data)
+            return
+          }
+        }
+        
+        if (isScanning) {
+          requestAnimationFrame(scan)
+        }
+      }
+      
+      scan()
+    })
+  }
+
+  const startScanning = async () => {
+    try {
+      setError('')
+      setIsScanning(true)
+      
+      // Request camera access
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'environment', // Use back camera on mobile
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      })
+      
+      streamRef.current = stream
+      videoRef.current.srcObject = stream
+      
+      // Start QR detection
+      const qrData = await detectQRCode(videoRef.current)
+      if (qrData) {
+        await handleQRCode(qrData)
+      }
+      
+    } catch (err) {
+      console.error('Camera error:', err)
+      setError('Camera access denied or not available')
+      setIsScanning(false)
     }
-  }
-
-  const handleError = (err) => {
-    console.error('QR Scanner error:', err)
-    setError('QR Scanner error: ' + err.message)
-  }
-
-  const startScanning = () => {
-    setError('')
-    setIsScanning(true)
   }
 
   const stopScanning = () => {
@@ -50,8 +92,46 @@ export default function QRScannerPage() {
     try {
       console.log('QR Code detected:', qrData) // Debug log
       
-      // QR data should be the reservation code directly (since we fixed QR generation)
-      const reservationCode = qrData.trim()
+      let reservationCode = ''
+      
+      // Try to parse as JSON first (new format)
+      try {
+        const qrDataObj = JSON.parse(qrData)
+        console.log('Parsed QR data:', qrDataObj) // Debug log
+        
+        if (qrDataObj.type === 'RESERVATION' && qrDataObj.code) {
+          reservationCode = qrDataObj.code
+        } else {
+          throw new Error('Invalid QR code format')
+        }
+      } catch (parseError) {
+        console.log('JSON parse failed, trying fallback:', parseError) // Debug log
+        
+        // Check if it's just an email address - if so, we need to find the reservation by email
+        if (qrData.includes('@') && qrData.includes('.')) {
+          console.log('QR code contains email, searching by email:', qrData)
+          // Search for reservation by email
+          const response = await fetch(`/api/reservations?email=${encodeURIComponent(qrData)}`)
+          if (response.ok) {
+            const reservations = await response.json()
+            if (reservations.length > 0) {
+              // Get the most recent reservation for this email
+              const latestReservation = reservations[0]
+              reservationCode = latestReservation.reservationCode
+              console.log('Found reservation by email:', latestReservation.reservationCode)
+            } else {
+              throw new Error('No reservation found for this email')
+            }
+          } else {
+            throw new Error('Failed to search by email')
+          }
+        } else {
+          // Fallback to old format
+          reservationCode = qrData.replace('RESERVATION:', '')
+        }
+      }
+      
+      console.log('Extracted reservation code:', reservationCode) // Debug log
       
       if (!reservationCode) {
         setScanResult({
@@ -61,16 +141,14 @@ export default function QRScannerPage() {
         return
       }
       
-      console.log('Navigating to reservation:', reservationCode) // Debug log
-      
-      // Navigate directly to the scan page
+      // Redirect to the scan page with the reservation code
       window.location.href = `/admin/scan/${reservationCode}`
       
     } catch (err) {
       console.error('QR processing error:', err) // Debug log
       setScanResult({
         success: false,
-        message: `Error processing QR code: ${err.message}`
+        message: `Network error. Please try again. Error: ${err.message}`
       })
     } finally {
       setIsLoading(false)
@@ -130,13 +208,17 @@ export default function QRScannerPage() {
         {isScanning && (
           <div className="space-y-4">
             <div className="relative bg-black rounded-lg overflow-hidden">
-              <QrReader
-                delay={300}
-                onError={handleError}
-                onScan={handleScan}
-                style={{ width: '100%', height: '256px' }}
-                facingMode="environment"
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full h-64 object-cover"
               />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg flex items-center justify-center">
+                  <QrCode className="h-12 w-12 text-white opacity-50" />
+                </div>
+              </div>
             </div>
             
             <div className="text-center">
@@ -210,21 +292,15 @@ export default function QRScannerPage() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Enter Reservation Code, Email, or Full QR JSON
+              Enter Reservation Code or Email
             </label>
             <input
               type="text"
               value={manualCode}
               onChange={(e) => setManualCode(e.target.value)}
-              placeholder="e.g., ABC123, user@example.com, or full QR JSON"
+              placeholder="e.g., ABC123 or user@example.com"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-          </div>
-          <div className="text-xs text-gray-500">
-            <p><strong>Test with these examples:</strong></p>
-            <p>• Reservation Code: <code>YI6QEFHX</code></p>
-            <p>• Email: <code>handsup@gabriela.com</code></p>
-            <p>• Full QR JSON: <code>{"{"}"type":"RESERVATION","code":"YI6QEFHX","name":"Gabriela","email":"handsup@gabriela.com"{"}"}</code></p>
           </div>
           <button
             onClick={handleManualCode}
