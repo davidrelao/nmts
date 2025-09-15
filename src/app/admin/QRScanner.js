@@ -59,7 +59,7 @@ export default function QRScanner({ onScan }) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-        const qrCode = null // QR detection disabled
+        const qrCode = null // QR detection disabled - no external libraries
 
         if (qrCode) {
           onScan(qrCode.data)

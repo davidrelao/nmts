@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { QrCode, CheckCircle, XCircle, RefreshCw, Camera } from 'lucide-react'
-import jsQR from 'jsqr'
+import QrReader from 'react-qr-scanner'
 
 export default function QRScannerPage() {
   const [isScanning, setIsScanning] = useState(false)
@@ -14,70 +14,22 @@ export default function QRScannerPage() {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
 
-  // Real QR code detection using jsQR
-  const detectQRCode = (videoElement) => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas')
-      const context = canvas.getContext('2d')
-      
-      const scan = () => {
-        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-          canvas.width = videoElement.videoWidth
-          canvas.height = videoElement.videoHeight
-          context.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
-          
-          const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-          
-          try {
-            const qrCode = jsQR(imageData.data, imageData.width, imageData.height)
-            
-            if (qrCode && qrCode.data) {
-              console.log('QR Code detected:', qrCode.data)
-              resolve(qrCode.data)
-              return
-            }
-          } catch (error) {
-            console.error('jsQR error:', error)
-          }
-        }
-        
-        if (isScanning) {
-          requestAnimationFrame(scan)
-        }
-      }
-      
-      scan()
-    })
+  // Handle QR code detection from react-qr-scanner
+  const handleScan = (data) => {
+    if (data) {
+      console.log('QR Code detected:', data)
+      handleQRCode(data)
+    }
   }
 
-  const startScanning = async () => {
-    try {
-      setError('')
-      setIsScanning(true)
-      
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      })
-      
-      streamRef.current = stream
-      videoRef.current.srcObject = stream
-      
-      // Start QR detection
-      const qrData = await detectQRCode(videoRef.current)
-      if (qrData) {
-        await handleQRCode(qrData)
-      }
-      
-    } catch (err) {
-      console.error('Camera error:', err)
-      setError('Camera access denied or not available')
-      setIsScanning(false)
-    }
+  const handleError = (err) => {
+    console.error('QR Scanner error:', err)
+    setError('QR Scanner error: ' + err.message)
+  }
+
+  const startScanning = () => {
+    setError('')
+    setIsScanning(true)
   }
 
   const stopScanning = () => {
@@ -178,17 +130,13 @@ export default function QRScannerPage() {
         {isScanning && (
           <div className="space-y-4">
             <div className="relative bg-black rounded-lg overflow-hidden">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full h-64 object-cover"
+              <QrReader
+                delay={300}
+                onError={handleError}
+                onScan={handleScan}
+                style={{ width: '100%', height: '256px' }}
+                facingMode="environment"
               />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg flex items-center justify-center">
-                  <QrCode className="h-12 w-12 text-white opacity-50" />
-                </div>
-              </div>
             </div>
             
             <div className="text-center">
