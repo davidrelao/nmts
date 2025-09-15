@@ -51,7 +51,7 @@ export default function ReservationsManagement({ reservations, sections, filters
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedReservations(reservations.map(r => r.id))
+      setSelectedReservations(reservations.map(r => r._id))
     } else {
       setSelectedReservations([])
     }
@@ -71,6 +71,11 @@ export default function ReservationsManagement({ reservations, sections, filters
     // Here you would implement bulk actions like check-in, delete, etc.
     console.log(`Bulk ${action} for reservations:`, selectedReservations)
     setSelectedReservations([])
+  }
+
+  const handleReservationClick = (reservation) => {
+    // Navigate to the reservation details page
+    router.push(`/admin/scan/${reservation.reservationCode}`)
   }
 
   return (
@@ -250,12 +255,16 @@ export default function ReservationsManagement({ reservations, sections, filters
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {reservations.map((reservation) => (
-                  <tr key={reservation.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <tr 
+                    key={reservation._id} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleReservationClick(reservation)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
-                        checked={selectedReservations.includes(reservation.id)}
-                        onChange={(e) => handleSelectReservation(reservation.id, e.target.checked)}
+                        checked={selectedReservations.includes(reservation._id)}
+                        onChange={(e) => handleSelectReservation(reservation._id, e.target.checked)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                     </td>
@@ -332,13 +341,17 @@ export default function ReservationsManagement({ reservations, sections, filters
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-3 p-4">
               {reservations.map((reservation) => (
-                <div key={reservation.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div 
+                  key={reservation._id} 
+                  className="bg-gray-50 rounded-lg p-4 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => handleReservationClick(reservation)}
+                >
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center">
+                    <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
-                        checked={selectedReservations.includes(reservation.id)}
-                        onChange={(e) => handleSelectReservation(reservation.id, e.target.checked)}
+                        checked={selectedReservations.includes(reservation._id)}
+                        onChange={(e) => handleSelectReservation(reservation._id, e.target.checked)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3"
                       />
                       <div>

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { QrCode, CheckCircle, XCircle, RefreshCw, Camera } from 'lucide-react'
+import jsQR from 'jsqr'
 
 export default function QRScannerPage() {
   const [isScanning, setIsScanning] = useState(false)
@@ -11,16 +12,33 @@ export default function QRScannerPage() {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
 
-  // Simple QR code detection (simulated)
+  // Real QR code detection using jsQR
   const detectQRCode = (videoElement) => {
-    // In a real implementation, you would use a QR code library like jsQR
-    // For now, we'll simulate QR detection
     return new Promise((resolve) => {
-      setTimeout(() => {
-        // Simulate finding a QR code
-        const mockQRData = 'RESERVATION:test-reservation-123'
-        resolve(mockQRData)
-      }, 2000)
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')
+      
+      const scan = () => {
+        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+          canvas.width = videoElement.videoWidth
+          canvas.height = videoElement.videoHeight
+          context.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
+          
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+          const qrCode = jsQR(imageData.data, imageData.width, imageData.height)
+          
+          if (qrCode) {
+            resolve(qrCode.data)
+            return
+          }
+        }
+        
+        if (isScanning) {
+          requestAnimationFrame(scan)
+        }
+      }
+      
+      scan()
     })
   }
 
