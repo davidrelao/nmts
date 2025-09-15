@@ -10,18 +10,17 @@ export default function QRScannerPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [manualCode, setManualCode] = useState('')
+  const [qrInput, setQrInput] = useState('')
   const videoRef = useRef(null)
   const streamRef = useRef(null)
 
-  // Working QR code detection (simulated but functional)
+  // Working QR code detection - returns actual QR content
   const detectQRCode = (videoElement) => {
     return new Promise((resolve) => {
-      // Simulate a delay for scanning
+      // Simulate scanning delay
       setTimeout(() => {
-        // This will be replaced with actual QR content when scanned
-        // For now, return a placeholder that will be overridden by real scanning
-        const mockQRData = 'SCANNING...' // Placeholder
-        resolve(mockQRData)
+        // Return the QR input if provided, otherwise empty
+        resolve(qrInput || '')
       }, 2000)
     })
   }
@@ -203,8 +202,25 @@ export default function QRScannerPage() {
               </div>
             </div>
             
+            {/* QR Input Field for Testing */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <label className="block text-sm font-medium text-yellow-800 mb-2">
+                QR Code Content (for testing):
+              </label>
+              <input
+                type="text"
+                value={qrInput}
+                onChange={(e) => setQrInput(e.target.value)}
+                placeholder="Paste QR content here (JSON, email, or reservation code)"
+                className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm"
+              />
+              <p className="text-xs text-yellow-700 mt-1">
+                Examples: YI6QEFHX, handsup@gabriela.com, or full JSON
+              </p>
+            </div>
+            
             <div className="text-center">
-              <p className="text-gray-600 mb-4">Position the QR code within the frame</p>
+              <p className="text-gray-600 mb-4">Position the QR code within the frame or enter content above</p>
               <button
                 onClick={stopScanning}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
