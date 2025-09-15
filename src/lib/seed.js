@@ -1,10 +1,23 @@
-import { getMuseumsCollection, generateId } from './db';
+const { MongoClient } = require('mongodb');
+require('dotenv').config();
 
 async function seedDatabase() {
+  let client;
+  
   try {
     console.log('🌱 Starting MongoDB database seeding...');
 
-    const museumsCollection = await getMuseumsCollection();
+    // Connect to MongoDB
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
+
+    client = new MongoClient(uri);
+    await client.connect();
+    
+    const db = client.db('museum_reservation');
+    const museumsCollection = db.collection('museums');
 
     // Create sample museum
     const museum = {
@@ -30,7 +43,11 @@ async function seedDatabase() {
   } catch (error) {
     console.error('❌ Error during seeding:', error);
     throw error;
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 }
 
-export default seedDatabase;
+module.exports = { seedDatabase };
