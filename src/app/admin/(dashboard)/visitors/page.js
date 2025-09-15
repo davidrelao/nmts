@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db'
+import { getReservationsCollection } from '@/lib/db'
 import VisitorsManagement from '../components/VisitorsManagement'
 
 export default async function VisitorsPage({ searchParams }) {
@@ -8,12 +8,12 @@ export default async function VisitorsPage({ searchParams }) {
     sortOrder = 'asc'
   } = searchParams
 
-  // Build search conditions
+  // Build search conditions for MongoDB
   const whereConditions = {}
   if (search) {
-    whereConditions.OR = [
-      { visitorName: { contains: search } },
-      { visitorEmail: { contains: search } }
+    whereConditions.$or = [
+      { visitorName: { $regex: search, $options: 'i' } },
+      { visitorEmail: { $regex: search, $options: 'i' } }
     ]
   }
 
@@ -22,29 +22,39 @@ export default async function VisitorsPage({ searchParams }) {
   let visitorData = []
 
   try {
-    // Get unique visitors with their reservation counts
-    visitors = await prisma.reservation.groupBy({
-      by: ['visitorName', 'visitorEmail'],
-      where: whereConditions,
-      _count: {
-        id: true
-      },
-      _max: {
-        visitDate: true
-      },
-      _sum: {
-        numberOfVisitors: true
+    const reservationsCollection = await getReservationsCollection()
+
+    // Get all reservations with search filter
+    const allReservations = await reservationsCollection
+      .find(whereConditions)
+      .toArray()
+
+    // Group by visitor name and email
+    const visitorMap = new Map()
+    
+    allReservations.forEach(reservation => {
+      const key = `${reservation.visitorName}|${reservation.visitorEmail}`
+      
+      if (!visitorMap.has(key)) {
+        visitorMap.set(key, {
+          name: reservation.visitorName,
+          email: reservation.visitorEmail,
+          totalReservations: 0,
+          totalVisitors: 0,
+          lastVisit: null
+        })
+      }
+      
+      const visitor = visitorMap.get(key)
+      visitor.totalReservations += 1
+      visitor.totalVisitors += reservation.numberOfVisitors
+      
+      if (!visitor.lastVisit || new Date(reservation.visitDate) > new Date(visitor.lastVisit)) {
+        visitor.lastVisit = reservation.visitDate
       }
     })
 
-    // Transform data for display
-    visitorData = visitors.map(visitor => ({
-    name: visitor.visitorName,
-    email: visitor.visitorEmail,
-    totalReservations: visitor._count.id,
-    totalVisitors: visitor._sum.numberOfVisitors,
-    lastVisit: visitor._max.visitDate
-  }))
+    visitorData = Array.from(visitorMap.values())
 
   // Sort the data after transformation
   if (sortBy === 'name') {

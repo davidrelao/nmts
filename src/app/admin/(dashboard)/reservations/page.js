@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db'
+import { getReservationsCollection, getMuseumsCollection } from '@/lib/db'
 import ReservationsManagement from '../components/ReservationsManagement'
 
 export default async function ReservationsPage({ searchParams }) {
@@ -9,7 +9,7 @@ export default async function ReservationsPage({ searchParams }) {
     search = ''
   } = searchParams
 
-  // Build filter conditions
+  // Build filter conditions for MongoDB
   const whereConditions = {}
 
   // Date filter
@@ -19,8 +19,8 @@ export default async function ReservationsPage({ searchParams }) {
     nextDay.setDate(selectedDate.getDate() + 1)
     
     whereConditions.visitDate = {
-      gte: selectedDate,
-      lt: nextDay
+      $gte: selectedDate,
+      $lt: nextDay
     }
   }
 
@@ -36,27 +36,13 @@ export default async function ReservationsPage({ searchParams }) {
     whereConditions.checkedIn = false
   }
 
-  // Search filter - combine with other conditions using AND
+  // Search filter
   if (search) {
-    const searchConditions = [
-      { visitorName: { contains: search } },
-      { visitorEmail: { contains: search } },
-      { reservationCode: { contains: search } }
+    whereConditions.$or = [
+      { visitorName: { $regex: search, $options: 'i' } },
+      { visitorEmail: { $regex: search, $options: 'i' } },
+      { reservationCode: { $regex: search, $options: 'i' } }
     ]
-    
-    // If we have other conditions, use AND to combine them
-    if (Object.keys(whereConditions).length > 0) {
-      whereConditions.AND = [
-        { ...whereConditions },
-        { OR: searchConditions }
-      ]
-      // Clear the original conditions since they're now in AND
-      Object.keys(whereConditions).forEach(key => {
-        if (key !== 'AND') delete whereConditions[key]
-      })
-    } else {
-      whereConditions.OR = searchConditions
-    }
   }
 
   // Initialize default values
@@ -64,28 +50,35 @@ export default async function ReservationsPage({ searchParams }) {
   let sections = []
 
   try {
+    const reservationsCollection = await getReservationsCollection()
+    const museumsCollection = await getMuseumsCollection()
+
     // Fetch reservations with filters
-    reservations = await prisma.reservation.findMany({
-      where: whereConditions,
-      include: {
-        museum: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            openingHours: true,
-            admissionPrice: true,
-          }
+    reservations = await reservationsCollection
+      .find(whereConditions)
+      .sort({ visitTime: 1 })
+      .toArray()
+
+    // Populate museum data
+    reservations = await Promise.all(
+      reservations.map(async (reservation) => {
+        const museum = await museumsCollection.findOne({ _id: reservation.museumId })
+        return {
+          ...reservation,
+          museum: museum ? {
+            _id: museum._id,
+            name: museum.name,
+            location: museum.location,
+            openingHours: museum.openingHours,
+            admissionPrice: museum.admissionPrice,
+          } : null
         }
-      },
-      orderBy: { visitTime: 'asc' }
-    })
+      })
+    )
 
     // Get unique sections for filter dropdown
-    sections = await prisma.reservation.findMany({
-      select: { museumSection: true },
-      distinct: ['museumSection']
-    })
+    const sectionData = await reservationsCollection.distinct('museumSection')
+    sections = sectionData
   } catch (error) {
     console.error('Error fetching reservations data:', error)
     // Continue with empty arrays - the page will show empty state
@@ -94,7 +87,7 @@ export default async function ReservationsPage({ searchParams }) {
   return (
     <ReservationsManagement 
       reservations={reservations}
-      sections={sections.map(s => s.museumSection)}
+      sections={sections}
       filters={{ date, section, status, search }}
     />
   )

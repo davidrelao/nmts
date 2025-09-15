@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { getReservationsCollection, getMuseumsCollection, generateId } from '@/lib/db'
 import QRCode from 'qrcode'
 
 export async function POST(request) {
@@ -41,31 +41,37 @@ export async function POST(request) {
     
     const qrCodeDataUrl = await QRCode.toDataURL(qrData)
     
+    const reservationsCollection = await getReservationsCollection()
+    const museumsCollection = await getMuseumsCollection()
+    
+    // Get museum details
+    const museum = await museumsCollection.findOne({ _id: museum_id })
+    
     // Create reservation in database
-    const reservation = await prisma.reservation.create({
-      data: {
-        visitorName: visitor_name,
-        visitorEmail: visitor_email,
-        reservationCode: reservationCode,
-        qrCodeData: qrCodeDataUrl,
-        visitDate: new Date(visit_date),
-        visitTime: visit_time,
-        museumSection: museum_section,
-        museumId: museum_id,
-        numberOfVisitors: parseInt(number_of_visitors),
-      },
-      include: {
-        museum: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            openingHours: true,
-            admissionPrice: true,
-          }
-        }
-      }
-    })
+    const reservation = {
+      _id: generateId(),
+      visitorName: visitor_name,
+      visitorEmail: visitor_email,
+      reservationCode: reservationCode,
+      qrCodeData: qrCodeDataUrl,
+      visitDate: new Date(visit_date),
+      visitTime: visit_time,
+      museumSection: museum_section,
+      museumId: museum_id,
+      numberOfVisitors: parseInt(number_of_visitors),
+      checkedIn: false,
+      checkedInAt: null,
+      createdAt: new Date(),
+      museum: museum ? {
+        _id: museum._id,
+        name: museum.name,
+        location: museum.location,
+        openingHours: museum.openingHours,
+        admissionPrice: museum.admissionPrice,
+      } : null
+    }
+    
+    await reservationsCollection.insertOne(reservation)
 
     return NextResponse.json(reservation)
   } catch (error) {
@@ -84,21 +90,13 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const reservationCode = searchParams.get('code')
     
+    const reservationsCollection = await getReservationsCollection()
+    const museumsCollection = await getMuseumsCollection()
+    
     if (reservationCode) {
       // Get specific reservation by code
-      const reservation = await prisma.reservation.findUnique({
-        where: { reservationCode: reservationCode },
-        include: {
-          museum: {
-            select: {
-              id: true,
-              name: true,
-              location: true,
-              openingHours: true,
-              admissionPrice: true,
-            }
-          }
-        }
+      const reservation = await reservationsCollection.findOne({ 
+        reservationCode: reservationCode 
       })
       
       if (!reservation) {
@@ -108,26 +106,47 @@ export async function GET(request) {
         )
       }
       
-      return NextResponse.json(reservation)
+      // Get museum details
+      const museum = await museumsCollection.findOne({ _id: reservation.museumId })
+      
+      const reservationWithMuseum = {
+        ...reservation,
+        museum: museum ? {
+          _id: museum._id,
+          name: museum.name,
+          location: museum.location,
+          openingHours: museum.openingHours,
+          admissionPrice: museum.admissionPrice,
+        } : null
+      }
+      
+      return NextResponse.json(reservationWithMuseum)
     }
     
     // Get all reservations (for admin purposes)
-    const reservations = await prisma.reservation.findMany({
-      include: {
-        museum: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            openingHours: true,
-            admissionPrice: true,
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
+    const reservations = await reservationsCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray()
     
-    return NextResponse.json(reservations)
+    // Populate museum data for each reservation
+    const reservationsWithMuseums = await Promise.all(
+      reservations.map(async (reservation) => {
+        const museum = await museumsCollection.findOne({ _id: reservation.museumId })
+        return {
+          ...reservation,
+          museum: museum ? {
+            _id: museum._id,
+            name: museum.name,
+            location: museum.location,
+            openingHours: museum.openingHours,
+            admissionPrice: museum.admissionPrice,
+          } : null
+        }
+      })
+    )
+    
+    return NextResponse.json(reservationsWithMuseums)
   } catch (error) {
     console.error('Error fetching reservations:', error)
     return NextResponse.json(

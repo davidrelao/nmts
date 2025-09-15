@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { getReservationsCollection, getMuseumsCollection } from '@/lib/db'
 
 export async function POST(request, { params }) {
   try {
@@ -12,22 +12,12 @@ export async function POST(request, { params }) {
       )
     }
 
+    const reservationsCollection = await getReservationsCollection()
+    const museumsCollection = await getMuseumsCollection()
+
     // Find reservation by code
-    const reservation = await prisma.reservation.findUnique({
-      where: {
-        reservationCode: code
-      },
-      include: {
-        museum: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            openingHours: true,
-            admissionPrice: true,
-          }
-        }
-      }
+    const reservation = await reservationsCollection.findOne({
+      reservationCode: code
     })
 
     if (!reservation) {
@@ -58,31 +48,35 @@ export async function POST(request, { params }) {
     }
 
     // Update reservation to checked in
-    const updatedReservation = await prisma.reservation.update({
-      where: {
-        id: reservation.id
-      },
-      data: {
-        checkedIn: true,
-        checkedInAt: new Date()
-      },
-      include: {
-        museum: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            openingHours: true,
-            admissionPrice: true,
-          }
+    const updatedReservation = await reservationsCollection.findOneAndUpdate(
+      { _id: reservation._id },
+      {
+        $set: {
+          checkedIn: true,
+          checkedInAt: new Date()
         }
-      }
-    })
+      },
+      { returnDocument: 'after' }
+    )
+
+    // Get museum details
+    const museum = await museumsCollection.findOne({ _id: reservation.museumId })
+
+    const reservationWithMuseum = {
+      ...updatedReservation,
+      museum: museum ? {
+        _id: museum._id,
+        name: museum.name,
+        location: museum.location,
+        openingHours: museum.openingHours,
+        admissionPrice: museum.admissionPrice,
+      } : null
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Check-in successful',
-      reservation: updatedReservation
+      reservation: reservationWithMuseum
     })
 
   } catch (error) {

@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db'
+import { getReservationsCollection, getMuseumsCollection } from '@/lib/db'
 import DashboardOverview from './components/DashboardOverview'
 
 export default async function AdminPage() {
@@ -24,62 +24,62 @@ export default async function AdminPage() {
   let allReservations = []
 
   try {
-    [todaysReservations, weeklyReservations, monthlyReservations, allReservations] = await Promise.all([
+    const reservationsCollection = await getReservationsCollection()
+    const museumsCollection = await getMuseumsCollection()
+
     // Today's reservations
-    prisma.reservation.findMany({
-      where: {
+    todaysReservations = await reservationsCollection
+      .find({
         visitDate: {
-          gte: today,
-          lt: tomorrow
+          $gte: today,
+          $lt: tomorrow
         }
-      },
-      include: {
-        museum: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            openingHours: true,
-            admissionPrice: true,
-          }
-        }
-      },
-      orderBy: { visitTime: 'asc' }
-    }),
+      })
+      .sort({ visitTime: 1 })
+      .toArray()
 
     // This week's reservations
-    prisma.reservation.findMany({
-      where: {
+    weeklyReservations = await reservationsCollection
+      .find({
         visitDate: {
-          gte: weekStart,
-          lt: weekEnd
+          $gte: weekStart,
+          $lt: weekEnd
         }
-      }
-    }),
+      })
+      .toArray()
 
     // This month's reservations
-    prisma.reservation.findMany({
-      where: {
+    monthlyReservations = await reservationsCollection
+      .find({
         visitDate: {
-          gte: monthStart,
-          lt: monthEnd
+          $gte: monthStart,
+          $lt: monthEnd
         }
-      }
-    }),
+      })
+      .toArray()
 
     // All reservations for analytics
-    prisma.reservation.findMany({
-      include: {
-        museum: {
-          select: {
-            id: true,
-            name: true,
-          }
+    allReservations = await reservationsCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray()
+
+    // Populate museum data for today's reservations
+    todaysReservations = await Promise.all(
+      todaysReservations.map(async (reservation) => {
+        const museum = await museumsCollection.findOne({ _id: reservation.museumId })
+        return {
+          ...reservation,
+          museum: museum ? {
+            _id: museum._id,
+            name: museum.name,
+            location: museum.location,
+            openingHours: museum.openingHours,
+            admissionPrice: museum.admissionPrice,
+          } : null
         }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
-  ])
+      })
+    )
   } catch (error) {
     console.error('Error fetching reservation data:', error)
     // Continue with empty arrays - the dashboard will show empty state

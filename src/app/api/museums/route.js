@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { getMuseumsCollection, generateId } from '@/lib/db'
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
     const museumId = searchParams.get('id')
     
+    const museumsCollection = await getMuseumsCollection()
+    
     if (museumId) {
       // Get specific museum by ID
-      const museum = await prisma.museum.findUnique({
-        where: { id: museumId }
-      })
+      const museum = await museumsCollection.findOne({ _id: museumId })
       
       if (!museum) {
         return NextResponse.json(
@@ -23,9 +23,10 @@ export async function GET(request) {
     }
     
     // Get all museums
-    const museums = await prisma.museum.findMany({
-      orderBy: { created_at: 'desc' }
-    })
+    const museums = await museumsCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray()
     
     return NextResponse.json(museums)
   } catch (error) {
@@ -57,17 +58,21 @@ export async function POST(request) {
       )
     }
 
+    const museumsCollection = await getMuseumsCollection()
+
     // Create museum in database
-    const museum = await prisma.museum.create({
-      data: {
-        name,
-        description,
-        location,
-        openingHours: opening_hours,
-        admissionPrice: admission_price,
-        imageUrl: image_url,
-      }
-    })
+    const museum = {
+      _id: generateId(),
+      name,
+      description,
+      location,
+      openingHours: opening_hours,
+      admissionPrice: admission_price,
+      imageUrl: image_url,
+      createdAt: new Date(),
+    }
+
+    await museumsCollection.insertOne(museum)
 
     return NextResponse.json(museum)
   } catch (error) {
