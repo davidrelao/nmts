@@ -25,11 +25,17 @@ export default function QRScannerPage() {
           context.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
           
           const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-          const qrCode = jsQR(imageData.data, imageData.width, imageData.height)
           
-          if (qrCode) {
-            resolve(qrCode.data)
-            return
+          try {
+            const qrCode = jsQR(imageData.data, imageData.width, imageData.height)
+            
+            if (qrCode && qrCode.data) {
+              console.log('QR Code detected:', qrCode.data)
+              resolve(qrCode.data)
+              return
+            }
+          } catch (error) {
+            console.error('jsQR error:', error)
           }
         }
         
@@ -104,8 +110,29 @@ export default function QRScannerPage() {
         }
       } catch (parseError) {
         console.log('JSON parse failed, trying fallback:', parseError) // Debug log
-        // Fallback to old format
-        reservationCode = qrData.replace('RESERVATION:', '')
+        
+        // Check if it's just an email address - if so, we need to find the reservation by email
+        if (qrData.includes('@') && qrData.includes('.')) {
+          console.log('QR code contains email, searching by email:', qrData)
+          // Search for reservation by email
+          const response = await fetch(`/api/reservations?email=${encodeURIComponent(qrData)}`)
+          if (response.ok) {
+            const reservations = await response.json()
+            if (reservations.length > 0) {
+              // Get the most recent reservation for this email
+              const latestReservation = reservations[0]
+              reservationCode = latestReservation.reservationCode
+              console.log('Found reservation by email:', latestReservation.reservationCode)
+            } else {
+              throw new Error('No reservation found for this email')
+            }
+          } else {
+            throw new Error('Failed to search by email')
+          }
+        } else {
+          // Fallback to old format
+          reservationCode = qrData.replace('RESERVATION:', '')
+        }
       }
       
       console.log('Extracted reservation code:', reservationCode) // Debug log

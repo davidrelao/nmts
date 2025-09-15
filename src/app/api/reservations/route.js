@@ -89,9 +89,44 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
     const reservationCode = searchParams.get('code')
+    const email = searchParams.get('email')
     
     const reservationsCollection = await getReservationsCollection()
     const museumsCollection = await getMuseumsCollection()
+    
+    if (email) {
+      // Get reservations by email
+      const reservations = await reservationsCollection
+        .find({ visitorEmail: email })
+        .sort({ createdAt: -1 })
+        .toArray()
+      
+      if (reservations.length === 0) {
+        return NextResponse.json(
+          { error: 'No reservations found for this email' },
+          { status: 404 }
+        )
+      }
+      
+      // Populate museum data for each reservation
+      const reservationsWithMuseums = await Promise.all(
+        reservations.map(async (reservation) => {
+          const museum = await museumsCollection.findOne({ _id: reservation.museumId })
+          return {
+            ...reservation,
+            museum: museum ? {
+              _id: museum._id,
+              name: museum.name,
+              location: museum.location,
+              openingHours: museum.openingHours,
+              admissionPrice: museum.admissionPrice,
+            } : null
+          }
+        })
+      )
+      
+      return NextResponse.json(reservationsWithMuseums)
+    }
     
     if (reservationCode) {
       // Get specific reservation by code
