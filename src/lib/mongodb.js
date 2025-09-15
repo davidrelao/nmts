@@ -1,5 +1,4 @@
 import { MongoClient } from 'mongodb';
-import { attachDatabasePool } from '@vercel/functions';
 
 const uri = process.env.MONGODB_URI;
 const options = {
@@ -19,18 +18,11 @@ if (uri) {
       client = new MongoClient(uri, options);
       globalWithMongo._mongoClient = client;
       globalWithMongo._mongoClientPromise = client.connect();
-      
-      // Attach the client to ensure proper cleanup on function suspension
-      attachDatabasePool(client);
     }
     clientPromise = globalWithMongo._mongoClientPromise;
   } else {
     // In production mode, it's best to not use a global variable.
     client = new MongoClient(uri, options);
-    
-    // Attach the client to ensure proper cleanup on function suspension
-    attachDatabasePool(client);
-    
     clientPromise = client.connect();
   }
 }
