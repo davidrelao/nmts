@@ -88,25 +88,32 @@ export default function QRScannerPage() {
     setError('')
     
     try {
+      console.log('QR Code detected:', qrData) // Debug log
+      
       let reservationCode = ''
       
       // Try to parse as JSON first (new format)
       try {
         const qrDataObj = JSON.parse(qrData)
+        console.log('Parsed QR data:', qrDataObj) // Debug log
+        
         if (qrDataObj.type === 'RESERVATION' && qrDataObj.code) {
           reservationCode = qrDataObj.code
         } else {
           throw new Error('Invalid QR code format')
         }
       } catch (parseError) {
+        console.log('JSON parse failed, trying fallback:', parseError) // Debug log
         // Fallback to old format
         reservationCode = qrData.replace('RESERVATION:', '')
       }
       
+      console.log('Extracted reservation code:', reservationCode) // Debug log
+      
       if (!reservationCode) {
         setScanResult({
           success: false,
-          message: 'Invalid QR code format'
+          message: `Invalid QR code format. Detected: ${qrData}`
         })
         return
       }
@@ -115,9 +122,10 @@ export default function QRScannerPage() {
       window.location.href = `/admin/scan/${reservationCode}`
       
     } catch (err) {
+      console.error('QR processing error:', err) // Debug log
       setScanResult({
         success: false,
-        message: 'Network error. Please try again.'
+        message: `Network error. Please try again. Error: ${err.message}`
       })
     } finally {
       setIsLoading(false)
