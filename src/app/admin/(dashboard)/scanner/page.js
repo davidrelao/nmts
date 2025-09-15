@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { QrCode, CheckCircle, XCircle, RefreshCw, Camera } from 'lucide-react'
-import QrScanner from 'qr-scanner'
+import jsQR from 'jsqr'
 
 export default function QRScannerPage() {
   const [isScanning, setIsScanning] = useState(false)
@@ -14,26 +14,39 @@ export default function QRScannerPage() {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
 
-  // Working QR code detection using qr-scanner
+  // Real QR code detection using jsQR
   const detectQRCode = (videoElement) => {
     return new Promise((resolve) => {
-      const qrScanner = new QrScanner(
-        videoElement,
-        (result) => {
-          console.log('QR Code detected:', result.data)
-          resolve(result.data)
-          qrScanner.stop()
-        },
-        {
-          highlightScanRegion: true,
-          highlightCodeOutline: true,
-        }
-      )
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')
       
-      qrScanner.start().catch(err => {
-        console.error('QR Scanner error:', err)
-        resolve(null)
-      })
+      const scan = () => {
+        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+          canvas.width = videoElement.videoWidth
+          canvas.height = videoElement.videoHeight
+          context.drawImage(videoElement, 0, 0, canvas.width, canvas.height)
+          
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+          
+          try {
+            const qrCode = jsQR(imageData.data, imageData.width, imageData.height)
+            
+            if (qrCode && qrCode.data) {
+              console.log('QR Code detected:', qrCode.data)
+              resolve(qrCode.data)
+              return
+            }
+          } catch (error) {
+            console.error('jsQR error:', error)
+          }
+        }
+        
+        if (isScanning) {
+          requestAnimationFrame(scan)
+        }
+      }
+      
+      scan()
     })
   }
 
@@ -42,15 +55,27 @@ export default function QRScannerPage() {
       setError('')
       setIsScanning(true)
       
-      // Start QR detection using qr-scanner
+      // Request camera access
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'environment', // Use back camera on mobile
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      })
+      
+      streamRef.current = stream
+      videoRef.current.srcObject = stream
+      
+      // Start QR detection
       const qrData = await detectQRCode(videoRef.current)
       if (qrData) {
         await handleQRCode(qrData)
       }
       
     } catch (err) {
-      console.error('QR Scanner error:', err)
-      setError('QR Scanner failed to start')
+      console.error('Camera error:', err)
+      setError('Camera access denied or not available')
       setIsScanning(false)
     }
   }
@@ -73,7 +98,7 @@ export default function QRScannerPage() {
     try {
       console.log('QR Code detected:', qrData) // Debug log
       
-      // QR data should be the reservation code directly
+      // QR data should be the reservation code directly (since we fixed QR generation)
       const reservationCode = qrData.trim()
       
       if (!reservationCode) {
