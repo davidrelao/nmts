@@ -5,6 +5,7 @@ import { useState } from 'react'
 export default function ReportsPage({ analytics }) {
   const [selectedPeriod, setSelectedPeriod] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [isExporting, setIsExporting] = useState(false)
   const itemsPerPage = 10
 
   // Pagination logic for recent reservations
@@ -15,6 +16,32 @@ export default function ReportsPage({ analytics }) {
 
   const handlePageChange = (page) => {
     setCurrentPage(page)
+  }
+
+  const handleExport = async (format) => {
+    try {
+      setIsExporting(true)
+      const response = await fetch(`/api/reports/export?format=${format}&period=${selectedPeriod}`)
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `museum-reservations-${selectedPeriod}-${new Date().toISOString().split('T')[0]}.${format}`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        alert('Failed to export data. Please try again.')
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('Failed to export data. Please try again.')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const formatDate = (dateString) => {
@@ -54,9 +81,42 @@ export default function ReportsPage({ analytics }) {
           <p className="text-sm sm:text-base text-gray-600 mt-1">Comprehensive museum performance insights</p>
         </div>
         <div className="flex gap-2">
-          <button className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base">
-            Export Report
-          </button>
+          {/* <select
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="year">This Year</option>
+          </select> */}
+          <div className="relative">
+            <button
+              onClick={() => handleExport('csv')}
+              disabled={isExporting}
+              className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors text-sm sm:text-base flex items-center gap-2"
+            >
+              {isExporting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  📊 Export CSV
+                </>
+              )}
+            </button>
+          </div>
+          {/* <button
+            onClick={() => handleExport('json')}
+            disabled={isExporting}
+            className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors text-sm sm:text-base flex items-center gap-2"
+          >
+            📄 Export JSON
+          </button> */}
         </div>
       </div>
 

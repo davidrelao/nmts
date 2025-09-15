@@ -10,6 +10,8 @@ export default function ReserveTicketClient({ museum }) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedSection, setSelectedSection] = useState('')
+  const [availability, setAvailability] = useState(null)
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
   const [formData, setFormData] = useState({
     visitor_name: '',
     visitor_email: '',
@@ -40,6 +42,52 @@ export default function ReserveTicketClient({ museum }) {
     }))
   }
 
+  const checkAvailability = async (date, time, section) => {
+    if (!date || !time || !section || !museum?._id) return
+
+    try {
+      setCheckingAvailability(true)
+      const response = await fetch(
+        `/api/reservations/check-availability?date=${date}&time=${time}&section=${section}&museumId=${museum._id}`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        setAvailability(data)
+      } else {
+        const errorData = await response.json()
+        console.error('Availability check failed:', errorData)
+        // Set a fallback availability if database is not configured
+        if (errorData.error === 'Database not configured') {
+          setAvailability({
+            available: true,
+            isBooked: false,
+            existingReservation: null
+          })
+        } else {
+          setAvailability(null)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking availability:', error)
+      // Set fallback availability on network errors
+      setAvailability({
+        available: true,
+        isBooked: false,
+        existingReservation: null
+      })
+    } finally {
+      setCheckingAvailability(false)
+    }
+  }
+
+  // Check availability when date, time, or section changes
+  useEffect(() => {
+    if (formData.visit_date && formData.visit_time && selectedSection) {
+      checkAvailability(formData.visit_date, formData.visit_time, selectedSection)
+    }
+  }, [formData.visit_date, formData.visit_time, selectedSection])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     
@@ -47,6 +95,16 @@ export default function ReserveTicketClient({ museum }) {
       toast({
         title: 'Missing Information',
         description: 'Please fill in all fields and select a museum section',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    // Check availability before submitting
+    if (availability && !availability.available) {
+      toast({
+        title: 'Time Slot Already Booked',
+        description: `This time slot is already booked by someone else. Please choose a different time.`,
         variant: 'destructive'
       })
       return
@@ -67,7 +125,17 @@ export default function ReserveTicketClient({ museum }) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create reservation')
+        const errorData = await response.json()
+        if (response.status === 409 && (errorData.error === 'Duplicate booking not allowed' || errorData.error === 'Time slot already booked')) {
+          toast({
+            title: 'Time Slot Already Booked',
+            description: errorData.details || 'This time slot is already booked by someone else.',
+            variant: 'destructive'
+          })
+          return
+        } else {
+          throw new Error(errorData.error || 'Failed to create reservation')
+        }
       }
 
       const reservation = await response.json()
@@ -86,7 +154,7 @@ export default function ReserveTicketClient({ museum }) {
       console.error('Error creating reservation:', error)
       toast({
         title: 'Reservation Error',
-        description: 'There was an error processing your reservation. Please try again.',
+        description: error.message || 'There was an error processing your reservation. Please try again.',
         variant: 'destructive'
       })
     } finally {
@@ -251,34 +319,83 @@ export default function ReserveTicketClient({ museum }) {
                 <label className="block font-semibold text-foreground mb-2">
                   Visit Time
                 </label>
-                <input
-                  type="time"
+                <select
                   name="visit_time"
                   value={formData.visit_time}
                   onChange={handleInputChange}
-                  min="09:00"
-                  max="16:00"
                   className="w-full p-3 rounded-lg border border-border bg-input text-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
                   required
-                />
+                >
+                  <option value="">Select a time</option>
+                  <option value="09:00">9:00 AM</option>
+                  <option value="09:30">9:30 AM</option>
+                  <option value="10:00">10:00 AM</option>
+                  <option value="10:30">10:30 AM</option>
+                  <option value="11:00">11:00 AM</option>
+                  <option value="11:30">11:30 AM</option>
+                  <option value="12:00">12:00 PM</option>
+                  <option value="12:30">12:30 PM</option>
+                  <option value="13:00">1:00 PM</option>
+                  <option value="13:30">1:30 PM</option>
+                  <option value="14:00">2:00 PM</option>
+                  <option value="14:30">2:30 PM</option>
+                  <option value="15:00">3:00 PM</option>
+                  <option value="15:30">3:30 PM</option>
+                  <option value="16:00">4:00 PM</option>
+                </select>
                 <p className="text-xs text-muted-foreground mt-1">
                   Museum hours: 9:00 AM - 5:00 PM (last entry at 4:00 PM)
                 </p>
               </div>
+
+              {/* Availability Status */}
+              {formData.visit_date && formData.visit_time && selectedSection && (
+                <div className="p-4 rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                  {checkingAvailability ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                      Checking availability...
+                    </div>
+                  ) : availability ? (
+                    <div className={`text-sm font-medium ${availability.available ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                      {availability.available ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-600 dark:text-green-400">✓</span>
+                          <span>This time slot is available for booking</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-red-600 dark:text-red-400">✗</span>
+                            <span>This time slot is already booked</span>
+                          </div>
+                          {/* {availability.existingReservation && (
+                            <div className="text-xs text-gray-600 dark:text-gray-400 ml-6">
+                              Booked by: {availability.existingReservation.visitorName} ({availability.existingReservation.numberOfVisitors} visitors)
+                            </div>
+                          )} */}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              )}
             
             <button 
               type="submit" 
-              disabled={isSubmitting}
-              className={`w-full px-4 py-4 rounded-lg text-white font-semibold text-base transition-colors flex items-center justify-center gap-2 ${
-                isSubmitting 
-                  ? 'bg-muted cursor-not-allowed' 
-                  : 'bg-primary hover:bg-primary-glow cursor-pointer'
+              disabled={isSubmitting || (availability && !availability.available)}
+              className={`w-full px-4 py-4 rounded-lg text-white font-semibold text-base transition-all duration-300 flex items-center justify-center gap-3 ${
+                isSubmitting || (availability && !availability.available)
+                  ? 'bg-gray-500 cursor-not-allowed opacity-75' 
+                  : 'bg-primary hover:bg-primary-glow cursor-pointer hover:shadow-lg transform hover:scale-[1.02]'
               }`}
             >
               {isSubmitting && (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               )}
-              {isSubmitting ? 'Processing Reservation...' : 'Reserve Ticket'}
+              <span className={isSubmitting ? 'animate-pulse' : ''}>
+                {isSubmitting ? 'Processing Reservation...' : 'Reserve Ticket'}
+              </span>
             </button>
           </form>
         </div>

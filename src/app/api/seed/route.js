@@ -3,7 +3,7 @@ import { getMuseumsCollection, generateId } from '@/lib/db'
 
 export async function POST(request) {
   try {
-    console.log('🌱 Starting database seeding...')
+    // console.log('🌱 Starting database seeding...')
 
     const museumsCollection = await getMuseumsCollection()
 
@@ -26,7 +26,7 @@ export async function POST(request) {
       { upsert: true }
     )
 
-    console.log('✅ Created museum:', museum.name)
+    // console.log('✅ Created museum:', museum.name)
 
     return NextResponse.json({
       success: true,

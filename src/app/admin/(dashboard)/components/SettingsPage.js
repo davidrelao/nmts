@@ -26,7 +26,7 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     // Here you would save settings to the database
-    console.log('Saving settings:', settings)
+    // console.log('Saving settings:', settings)
     alert('Settings saved successfully!')
   }
 

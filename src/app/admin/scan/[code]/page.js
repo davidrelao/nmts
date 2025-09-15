@@ -58,14 +58,18 @@ export default function QRScanPage() {
       })
 
       if (response.ok) {
-        const updatedReservation = await response.json()
-        setReservation(updatedReservation)
+        const result = await response.json()
         
         toast({
           title: "Check-in Successful",
           description: `${reservation.visitorName} has been checked in successfully!`,
           variant: "success"
         })
+        
+        // Reload the page to show updated data
+        setTimeout(() => {
+          window.location.reload()
+        }, 1000)
       } else {
         const error = await response.json()
         toast({

@@ -16,10 +16,12 @@ import {
   LogOut
 } from 'lucide-react'
 import AuthGuard from '@/components/AuthGuard'
+import { LoadingProvider, useLoading } from './contexts/LoadingContext'
 
-const AdminDashboardLayout = ({ children }) => {
+const AdminDashboardContent = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
+  const { isLoading } = useLoading()
 
   const handleLogout = () => {
     // Set login status to false in localStorage
@@ -120,7 +122,9 @@ const AdminDashboardLayout = ({ children }) => {
               >
                 <IconComponent className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{item.name}</div>
+                  <div className="font-medium truncate">
+                    {item.name}
+                  </div>
                   <div className="text-xs text-gray-500 truncate hidden sm:block">{item.description}</div>
                 </div>
               </Link>
@@ -194,6 +198,14 @@ const AdminDashboardLayout = ({ children }) => {
       </div>
     </div>
     </AuthGuard>
+  )
+}
+
+const AdminDashboardLayout = ({ children }) => {
+  return (
+    <LoadingProvider>
+      <AdminDashboardContent>{children}</AdminDashboardContent>
+    </LoadingProvider>
   )
 }
 

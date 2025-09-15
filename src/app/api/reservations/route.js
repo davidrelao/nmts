@@ -34,6 +34,39 @@ export async function POST(request) {
     const reservationsCollection = await getReservationsCollection()
     const museumsCollection = await getMuseumsCollection()
     
+    // Check if time slot is already booked by anyone (1 booking per date/time/exhibit)
+    const visitDate = new Date(visit_date)
+    const startOfDay = new Date(visitDate.getFullYear(), visitDate.getMonth(), visitDate.getDate())
+    const endOfDay = new Date(startOfDay)
+    endOfDay.setDate(endOfDay.getDate() + 1)
+    
+    const existingBooking = await reservationsCollection.findOne({
+      museumId: museum_id,
+      museumSection: museum_section,
+      visitTime: visit_time,
+      visitDate: {
+        $gte: startOfDay,
+        $lt: endOfDay
+      }
+    })
+    
+    if (existingBooking) {
+      return NextResponse.json(
+        { 
+          error: 'Time slot already booked',
+          details: `This time slot for ${museum_section} on ${visit_date} at ${visit_time} is already booked by someone else. Please choose a different time.`,
+          existingReservation: {
+            code: existingBooking.reservationCode,
+            visitorName: existingBooking.visitorName,
+            date: existingBooking.visitDate,
+            time: existingBooking.visitTime,
+            section: existingBooking.museumSection
+          }
+        },
+        { status: 409 }
+      )
+    }
+    
     // Get museum details
     const museum = await museumsCollection.findOne({ _id: museum_id })
     

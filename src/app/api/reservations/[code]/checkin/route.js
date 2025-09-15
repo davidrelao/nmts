@@ -45,19 +45,23 @@ export async function POST(request, { params }) {
     
     const isSameDate = todayDateOnly.getTime() === visitDateOnly.getTime()
     
-    console.log('Check-in attempt:', {
-      reservationCode: code,
-      today: todayDateOnly.toDateString(),
-      visitDate: visitDateOnly.toDateString(),
-      isSameDate,
-      reservation: {
-        visitDate: reservation.visitDate,
-        checkedIn: reservation.checkedIn
-      }
-    })
+    // console.log('Check-in attempt:', {
+    //   reservationCode: code,
+    //   today: todayDateOnly.toDateString(),
+    //   visitDate: visitDateOnly.toDateString(),
+    //   isSameDate,
+    //   reservation: {
+    //     visitDate: reservation.visitDate,
+    //     checkedIn: reservation.checkedIn
+    //   }
+    // })
 
-    // Allow check-in only if it's the same date
-    if (!isSameDate) {
+    // Allow check-in if it's the same date OR if it's within 1 day (for flexibility)
+    const oneDayInMs = 24 * 60 * 60 * 1000
+    const timeDifference = Math.abs(todayDateOnly.getTime() - visitDateOnly.getTime())
+    const isWithinOneDay = timeDifference <= oneDayInMs
+    
+    if (!isSameDate && !isWithinOneDay) {
       return NextResponse.json(
         { error: 'Cannot check in on a different date than reserved' },
         { status: 400 }

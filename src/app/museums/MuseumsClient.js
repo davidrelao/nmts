@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
@@ -32,11 +32,13 @@ export default function MuseumsClient({ museum }) {
     }
   ]
 
+
   const handleReserveTicket = (sectionId) => {
     if (!museum) return
     setIsLoading(true)
     router.push(`/reserve/${museum._id}?section=${sectionId}`)
   }
+
 
   if (isLoading) {
     return (
@@ -98,6 +100,7 @@ export default function MuseumsClient({ museum }) {
                   </div>
                 </div>
               </div>
+
 
               {/* Sections */}
               <h3 className="text-2xl font-semibold mb-8 text-center text-foreground">

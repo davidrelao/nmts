@@ -5,7 +5,7 @@ async function seedDatabase() {
   let client;
   
   try {
-    console.log('🌱 Starting MongoDB database seeding...');
+    // console.log('🌱 Starting MongoDB database seeding...');
 
     // Connect to MongoDB
     const uri = process.env.MONGODB_URI;
@@ -38,8 +38,8 @@ async function seedDatabase() {
       { upsert: true }
     );
 
-    console.log('✅ Created museum:', museum.name);
-    console.log('🎉 Database seeding completed!');
+    // console.log('✅ Created museum:', museum.name);
+    // console.log('🎉 Database seeding completed!');
   } catch (error) {
     console.error('❌ Error during seeding:', error);
     throw error;

@@ -33,8 +33,8 @@ export default async function AdminPage() {
       .sort({ createdAt: -1 })
       .toArray()
 
-    console.log('All reservations found:', allReservations.length)
-    console.log('Sample reservation:', allReservations[0])
+    // console.log('All reservations found:', allReservations.length)
+    // console.log('Sample reservation:', allReservations[0])
 
     // Today's reservations - filter by creation date for admin view
     todaysReservations = allReservations.filter(r => {
