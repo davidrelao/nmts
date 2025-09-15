@@ -269,13 +269,16 @@ export default function ReserveTicketClient({ museum }) {
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className={`w-full px-4 py-4 rounded-lg text-white font-semibold text-base transition-colors ${
+              className={`w-full px-4 py-4 rounded-lg text-white font-semibold text-base transition-colors flex items-center justify-center gap-2 ${
                 isSubmitting 
                   ? 'bg-muted cursor-not-allowed' 
                   : 'bg-primary hover:bg-primary-glow cursor-pointer'
               }`}
             >
-              {isSubmitting ? 'Processing...' : 'Reserve Ticket'}
+              {isSubmitting && (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              )}
+              {isSubmitting ? 'Processing Reservation...' : 'Reserve Ticket'}
             </button>
           </form>
         </div>

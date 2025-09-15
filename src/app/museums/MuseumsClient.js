@@ -34,6 +34,7 @@ export default function MuseumsClient({ museum }) {
 
   const handleReserveTicket = (sectionId) => {
     if (!museum) return
+    setIsLoading(true)
     router.push(`/reserve/${museum._id}?section=${sectionId}`)
   }
 
