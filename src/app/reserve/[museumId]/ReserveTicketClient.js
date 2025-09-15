@@ -61,7 +61,7 @@ export default function ReserveTicketClient({ museum }) {
         },
         body: JSON.stringify({
           ...formData,
-          museum_id: museum.id,
+          museum_id: museum._id,
           museum_section: selectedSection,
         }),
       })
