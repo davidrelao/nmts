@@ -3,7 +3,7 @@ import ReservationsManagement from '../components/ReservationsManagement'
 
 export default async function ReservationsPage({ searchParams }) {
   const { 
-    date = new Date().toISOString().split('T')[0],
+    date = '', // Default to no date filter to show all reservations
     section = 'all',
     status = 'all',
     search = ''
@@ -12,13 +12,13 @@ export default async function ReservationsPage({ searchParams }) {
   // Build filter conditions for MongoDB
   const whereConditions = {}
 
-  // Date filter
+  // Date filter - filter by creation date instead of visit date for admin view
   if (date) {
     const selectedDate = new Date(date)
     const nextDay = new Date(selectedDate)
     nextDay.setDate(selectedDate.getDate() + 1)
     
-    whereConditions.visitDate = {
+    whereConditions.createdAt = {
       $gte: selectedDate,
       $lt: nextDay
     }
